@@ -28,3 +28,14 @@ def test_not_match(script, output):
 )
 def test_get_new_command(script, output, new_command):
     assert get_new_command(Command(script, output)) == new_command
+
+
+@pytest.mark.parametrize(
+    "script, output",
+    [
+        ("mv oldname newname", "mv: cannot stat 'oldname': No such file or directory"),
+        ("cp oldname newname", "cp: cannot stat 'oldname': No such file or directory"),
+    ],
+)
+def test_not_match_missing_source(script, output):
+    assert not match(Command(script, output))

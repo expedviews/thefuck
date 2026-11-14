@@ -71,3 +71,21 @@ def test_get_new_command(ext, tar_error, filename, unquoted, quoted, script, fix
     tar_error(unquoted.format(ext))
     assert (get_new_command(Command(script.format(filename.format(ext)), ''))
             == fixed.format(dir=quoted.format(''), filename=filename.format(ext)))
+
+
+def test_side_effect_keeps_sibling_directory_files(tmpdir):
+    # "<cwd>2/keep.txt" starts with the string "<cwd>" but is outside the cwd.
+    import io
+    app, app2 = tmpdir.mkdir('app'), tmpdir.mkdir('app2')
+    keep = app2.join('keep.txt')
+    keep.write('IMPORTANT')
+    with tarfile.TarFile(str(app.join('evil.tar')), 'w') as archive:
+        for name in ('readme.txt', '../app2/keep.txt'):
+            info = tarfile.TarInfo(name)
+            info.size = 1
+            archive.addfile(info, io.BytesIO(b'x'))
+    app.join('readme.txt').write('x')
+    os.chdir(str(app))
+    side_effect(Command(u'tar xf evil.tar', ''), None)
+    assert keep.read() == 'IMPORTANT'
+    assert not app.join('readme.txt').check()

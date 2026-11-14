@@ -38,10 +38,20 @@ def get_new_command(command):
         .format(dir=dir, cmd=command.script)
 
 
+def _is_inside_cwd(path):
+    # A plain string-prefix check would accept sibling directories such as
+    # "<cwd>2/x", so compare whole path components instead.
+    cwd = os.getcwd()
+    try:
+        return os.path.commonpath([os.path.abspath(path), cwd]) == cwd
+    except ValueError:
+        return False
+
+
 def side_effect(old_cmd, command):
     with tarfile.TarFile(_tar_file(old_cmd.script_parts)[0]) as archive:
         for file in archive.getnames():
-            if not os.path.abspath(file).startswith(os.getcwd()):
+            if not _is_inside_cwd(file):
                 # it's unsafe to overwrite files outside of the current directory
                 continue
 

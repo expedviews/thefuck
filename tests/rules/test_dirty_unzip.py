@@ -69,3 +69,18 @@ def test_side_effect(zip_error, script, filename):
 def test_get_new_command(zip_error, script, fixed, filename):
     zip_error(filename)
     assert get_new_command(Command(script, '')) == fixed
+
+
+def test_side_effect_keeps_sibling_directory_files(tmpdir):
+    # "<cwd>2/keep.txt" starts with the string "<cwd>" but is outside the cwd.
+    app, app2 = tmpdir.mkdir('app'), tmpdir.mkdir('app2')
+    keep = app2.join('keep.txt')
+    keep.write('IMPORTANT')
+    with zipfile.ZipFile(str(app.join('evil.zip')), 'w') as archive:
+        archive.writestr('readme.txt', 'x')
+        archive.writestr('../app2/keep.txt', 'z')
+    app.join('readme.txt').write('x')
+    os.chdir(str(app))
+    side_effect(Command(u'unzip evil.zip', ''), None)
+    assert keep.read() == 'IMPORTANT'
+    assert not app.join('readme.txt').check()

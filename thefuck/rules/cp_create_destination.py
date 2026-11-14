@@ -4,6 +4,9 @@ from thefuck.utils import for_app
 
 @for_app("cp", "mv")
 def match(command):
+    if "cannot stat" in command.output:
+        # the *source* is missing, creating the destination would not help
+        return False
     return (
         "No such file or directory" in command.output
         or command.output.startswith("cp: directory")
